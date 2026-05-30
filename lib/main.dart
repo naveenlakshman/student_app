@@ -12,6 +12,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: 'Global IT ERP',
       debugShowCheckedModeBanner: false,
       home: const LMSWebView(),
     );
@@ -57,7 +58,7 @@ class _LMSWebViewState extends State<LMSWebView> {
         ),
       )
       ..loadRequest(
-        Uri.parse('https://www.globaliterp.com/student/login'),
+        Uri.parse('https://www.globaliterp.com/login'),
       );
   }
 
@@ -116,20 +117,6 @@ class _LMSWebViewState extends State<LMSWebView> {
     return Scaffold(
       body: SafeArea(
         child: WebViewWidget(controller: controller),
-      ),
-      // Temporary test button to verify url_launcher behavior
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () async {
-          const testNumber = '919166348818'; // replace with a reachable test number if needed
-          final testUrl = 'whatsapp://send?phone=$testNumber&text=Hello%20from%20test';
-          debugPrint('FAB test launching: $testUrl');
-          await _launchExternalUrl(testUrl);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Tried launching WhatsApp URL (check logs).')),
-          );
-        },
-        label: const Text('Test WhatsApp'),
-        icon: const Icon(Icons.open_in_new),
       ),
     );
   }
