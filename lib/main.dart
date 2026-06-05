@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import 'package:webview_flutter_android/webview_flutter_android.dart';
 
 void main() {
   runApp(const MyApp());
@@ -13,7 +17,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Global IT ERP',
+      title: 'Global IT LMS',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
@@ -42,6 +46,16 @@ class _RootHandlerState extends State<RootHandler> {
   }
 
   Future<void> _checkRole() async {
+    // Request camera and microphone permissions at startup
+    try {
+      await [
+        Permission.camera,
+        Permission.microphone,
+      ].request();
+    } catch (e) {
+      debugPrint('Error requesting permissions: $e');
+    }
+
     final prefs = await SharedPreferences.getInstance();
     final role = prefs.getString('user_role');
     setState(() {
@@ -147,7 +161,7 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 32),
                 const Text(
-                  'GLOBAL IT ERP',
+                  'GLOBAL IT LMS',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 28,
@@ -312,7 +326,20 @@ class _LMSWebViewState extends State<LMSWebView> {
     super.initState();
     _currentUrl = widget.initialUrl;
 
-    controller = WebViewController()
+    controller = WebViewController.fromPlatformCreationParams(
+      const PlatformWebViewControllerCreationParams(),
+      onPermissionRequest: (WebViewPermissionRequest request) {
+        debugPrint('WebView requesting permission for: ${request.types}');
+        request.grant();
+      },
+    );
+
+    if (Platform.isAndroid) {
+      final androidController = controller.platform as AndroidWebViewController;
+      androidController.setOnShowFileSelector(_androidFilePicker);
+    }
+
+    controller
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setUserAgent('Mozilla/5.0 (Linux; Android 10; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36 attnandbillingapp')
       ..setNavigationDelegate(
@@ -352,6 +379,25 @@ class _LMSWebViewState extends State<LMSWebView> {
       ..loadRequest(
         Uri.parse(widget.initialUrl),
       );
+  }
+
+  Future<List<String>> _androidFilePicker(FileSelectorParams params) async {
+    try {
+      final bool allowMultiple = params.mode == FileSelectorMode.openMultiple;
+      final result = await FilePicker.platform.pickFiles(
+        allowMultiple: allowMultiple,
+        type: FileType.any,
+      );
+      if (result != null && result.files.isNotEmpty) {
+        return result.files
+            .where((file) => file.path != null)
+            .map((file) => Uri.file(file.path!).toString())
+            .toList();
+      }
+    } catch (e) {
+      debugPrint('Error picking files: $e');
+    }
+    return [];
   }
 
   Future<void> _resetRoleAndGoToWelcome() async {
