@@ -296,6 +296,16 @@ class LMSWebView extends StatefulWidget {
 class _LMSWebViewState extends State<LMSWebView> {
   late final WebViewController controller;
   String _currentUrl = '';
+  bool _canGoBack = false;
+
+  Future<void> _updateCanGoBack() async {
+    final canGo = await controller.canGoBack();
+    if (mounted) {
+      setState(() {
+        _canGoBack = canGo;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -311,11 +321,13 @@ class _LMSWebViewState extends State<LMSWebView> {
             setState(() {
               _currentUrl = url;
             });
+            _updateCanGoBack();
           },
           onPageFinished: (String url) {
             setState(() {
               _currentUrl = url;
             });
+            _updateCanGoBack();
           },
           onNavigationRequest: (NavigationRequest request) {
             final url = request.url;
@@ -410,19 +422,31 @@ class _LMSWebViewState extends State<LMSWebView> {
     final url = _currentUrl.toLowerCase();
     final showSwitchButton = url.contains('/login') || url.endsWith('/student');
 
-    return Scaffold(
-      body: SafeArea(
-        child: WebViewWidget(controller: controller),
+    return PopScope<Object?>(
+      canPop: !_canGoBack,
+      onPopInvokedWithResult: (bool didPop, Object? result) async {
+        if (didPop) {
+          return;
+        }
+        if (_canGoBack) {
+          await controller.goBack();
+          _updateCanGoBack();
+        }
+      },
+      child: Scaffold(
+        body: SafeArea(
+          child: WebViewWidget(controller: controller),
+        ),
+        floatingActionButton: showSwitchButton
+            ? FloatingActionButton.extended(
+                onPressed: _resetRoleAndGoToWelcome,
+                icon: const Icon(Icons.swap_horiz),
+                label: const Text('Switch Portal'),
+                backgroundColor: const Color(0xFF203A43),
+                foregroundColor: Colors.white,
+              )
+            : null,
       ),
-      floatingActionButton: showSwitchButton
-          ? FloatingActionButton.extended(
-              onPressed: _resetRoleAndGoToWelcome,
-              icon: const Icon(Icons.swap_horiz),
-              label: const Text('Switch Portal'),
-              backgroundColor: const Color(0xFF203A43),
-              foregroundColor: Colors.white,
-            )
-          : null,
     );
   }
 }
