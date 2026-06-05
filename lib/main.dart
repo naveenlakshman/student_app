@@ -337,6 +337,7 @@ class _LMSWebViewState extends State<LMSWebView> {
     if (Platform.isAndroid) {
       final androidController = controller.platform as AndroidWebViewController;
       androidController.setOnShowFileSelector(_androidFilePicker);
+      androidController.setMediaPlaybackRequiresUserGesture(false);
     }
 
     controller
